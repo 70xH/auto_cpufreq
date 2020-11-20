@@ -11,7 +11,7 @@ then
 	exit 1
 fi
 
-echo -e "\n* Deploy auto-cpufreq systemd unit file"
+echo -e "\n* Deploy auto-cpufreq runit unit file"
 mkdir /etc/sv/auto-cpufreq
 cp /usr/local/share/auto-cpufreq/scripts/run /etc/sv/auto-cpufreq
 chmod +x /etc/sv/auto-cpufreq/run
