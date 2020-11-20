@@ -1,0 +1,170 @@
+#!/bin/bash
+#
+# auto-cpufreq-installer:
+# auto-cpufreq source code based installer
+
+SCRIPT_PATH=$(readlink -f "$0")
+SCRIPT_DIR=$(dirname "${SCRIPT_PATH}")
+cd "${SCRIPT_DIR}"
+
+distro="$(lsb_release -is)"
+release="$(lsb_release -rs)"
+codename="$(lsb_release -cs)"
+
+separator(){
+sep="\n-------------------------------------------------------------------------------"
+echo -e $sep
+}
+
+# root check
+root_check(){
+if (( $EUID != 0 ));
+then
+    separator
+    echo -e "\nMust be run as root (i.e: 'sudo $0')."
+    separator
+    exit 1
+fi
+}
+
+# python packages install
+pip_pkg_install(){
+python3 -m pip install setuptools psutil click distro
+}
+
+complete_msg(){
+echo -e "\nauto-cpufreq tool successfully installed.\n"
+echo -e "For list of options, run:\nauto-cpufreq"
+}
+
+# tool install
+install(){
+python3 setup.py install --record files.txt
+mkdir -p /usr/local/share/auto-cpufreq/
+cp -r scripts/ /usr/local/share/auto-cpufreq/
+}
+
+tool_install(){
+# Void
+if [[ "$distro" == VoidLinux ]];
+then
+  separator
+  echo -e "\nDetected Void based distribution"
+  separator
+  echo -e "\nSetting up the python environment"
+  separator
+  xbps-install -y python3 python3-devel python3-pip python3-setuptools
+  separator
+  pip_pkg_install
+  separator
+  install
+  separator
+  complete_msg
+  separator
+
+# Other
+else
+    separator
+    echo -e "\nDidn't detect Debian or RedHat based distro.\n"
+    echo -e "To complete installation, you need to:"
+    echo -e "Install: python3, pip3, python3-setuptools\n"
+    echo -e "Install necessary Python packages:"
+    echo -e "pip3 install psutil click distro power"
+    echo -e "\nRun following sequence of lines:"
+    echo -e "\n-----"
+    echo -e "\npython3 setup.py install --record files.txt"
+    echo -e "mkdir -p /usr/local/share/auto-cpufreq/"
+    echo -e "cp -r scripts/ /usr/local/share/auto-cpufreq/"
+    echo -e "\n-----"
+    echo -e "\nAfter which tool is installed, for full list of options run:"
+    echo -e "auto-cpufreq"
+    separator
+fi
+}
+
+tool_remove(){
+
+files="files.txt"
+share_dir="/usr/local/share/auto-cpufreq/"
+srv_install="/usr/bin/auto-cpufreq-install"
+srv_remove="/usr/bin/auto-cpufreq-remove"
+log_file="/var/log/auto-cpufreq.log"
+tool_proc_rm="auto-cpufreq --remove"
+
+# stop any running auto-cpufreq argument (daemon/live/monitor)
+tool_arg_pids=( $(pgrep -f "auto-cpufreq --") )
+for pid in "${tool_arg_pids[@]}"; do
+  if [[ $tool_arg_pids != $$ ]]; then
+    kill "$tool_arg_pids"
+  fi
+done
+
+# run uninstall in case of installed daemon
+if [ -f $srv_remove ]
+then
+    eval $tool_proc_rm
+fi
+
+# remove auto-cpufreq and all its supporting files
+[ -f $files ] && cat $files | xargs sudo rm -rf && rm -f $files
+[ -f $share_dir ] && rm -rf $share_dir
+
+# files cleanup
+[ -f $srv_install ] && rm $srv_install
+[ -f $srv_remove ] && rm $srv_remove
+[ -f $log_file ] && rm $log_file
+
+separator
+echo -e "\nauto-cpufreq tool and all its supporting files successfully removed."
+separator
+}
+
+ask_operation(){
+echo -e "\n-------------------------- auto-cpufreq installer -----------------------------"
+echo -e "\nWelcome to auto-cpufreq tool installer."
+echo -e "\nOptions:\n"
+read -p "[I]nstall
+[R]emove
+[Q]uit
+
+Select a key: [i/r/q]: " answer
+}
+
+root_check
+
+if [[ -z "${1}" ]];
+
+then
+    ask_operation
+else
+  case "${1}" in
+    "--install")
+        answer="i"
+        ;;
+    "--remove")
+        answer="r"
+        ;;
+    *)
+        answer="n"
+        ;;
+  esac
+fi
+
+if [[ $answer == [Ii] ]];
+then
+    root_check
+    tool_install
+elif [[ $answer == [Rr] ]];
+then
+    root_check
+    tool_remove
+elif [[ $answer == [Qq] ]];
+then
+    separator
+    echo ""
+    exit 0
+else
+    separator
+    echo -e "\nUnknown key, aborting ...\n"
+    exit 1
+fi
