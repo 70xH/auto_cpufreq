@@ -1,6 +1,7 @@
 # auto-cpufreq
 
 > NOTE
+>
 > This is a forked repo from [github](https://github.com/AdnanHodzic/auto-cpufreq), some changes to support the Void Linux.
 > May make some changes to optimize for AMD (no hopes).
 
