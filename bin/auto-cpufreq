@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+#
+# auto-cpufreq - Automatic CPU speed & power optimizer for Linux
+#
+# Blog post: http://foolcontrol.org/?p=3124
+
+# core import
+import sys
+from subprocess import call, run
+
+sys.path.append('../')
+from source.core import *
+
+
+# cli
+@click.command()
+@click.option("--monitor", is_flag=True, help="Monitor and see suggestions for CPU optimizations")
+@click.option("--live", is_flag=True, help="Monitor and make (temp.) suggested CPU optimizations")
+@click.option("--install/--remove", default=True, help="Install/remove daemon for (permanent) automatic CPU optimizations")
+@click.option("--log", is_flag=True, help="View live CPU optimization log made by daemon")
+@click.option("--daemon", is_flag=True, hidden=True)
+@click.option("--debug", is_flag=True, help="Show debug info (include when submitting bugs)")
+def main(monitor, live, daemon, install, log, debug):
+    if len(sys.argv) == 1:
+        print("\n" + "-" * 32 + " auto-cpufreq " + "-" * 33 + "\n")
+        print("Automatic CPU speed & power optimizer for Linux")
+        print("\nExample usage:\nauto-cpufreq --monitor")
+        print("\n-----\n")
+
+        run(["auto-cpufreq", "--help"])
+        footer()
+    else:
+        # Important: order does matter
+        if daemon:
+            if os.getenv("PKG_MARKER") == "SNAP" and dcheck == "enabled":
+                while True:
+                    root_check()
+                    footer()
+                    gov_check()
+                    cpufreqctl()
+                    distro_info()
+                    sysinfo()
+                    set_autofreq()
+                    countdown(5)
+                    run("clear")
+            elif os.getenv("PKG_MARKER") != "SNAP":
+                while True:
+                    root_check()
+                    footer()
+                    gov_check()
+                    cpufreqctl()
+                    distro_info()
+                    sysinfo()
+                    set_autofreq()
+                    countdown(5)
+                    run("clear")
+            else:
+                daemon_not_found()
+        elif monitor:
+            while True:
+                root_check()
+                footer()
+                running_daemon()
+                gov_check()
+                cpufreqctl()
+                distro_info()
+                print("")
+                sysinfo()
+                mon_autofreq()
+                countdown(5)
+                run("clear")
+        elif live:
+            while True:
+                root_check()
+                footer()
+                running_daemon()
+                gov_check()
+                cpufreqctl()
+                distro_info()
+                print("")
+                sysinfo()
+                set_autofreq()
+                countdown(5)
+                run("clear")
+        elif log:
+            read_log()
+        elif debug:
+            root_check()
+            footer()
+            distro_info()
+            print("")
+            if os.getenv('PKG_MARKER') == "SNAP":
+                print("Snap package: yes")
+            else:
+                app_version()
+                print("Snap package: no")
+            print("")
+            python_info()
+            print("")
+            if charging():
+                print("Battery is: charging")
+            else:
+                print("Battery is: discharging")
+            print("")
+            app_res_use()
+            print("")
+            sysinfo()
+            display_load()
+            get_current_gov()
+            get_turbo()
+            footer()
+        elif install:
+            if os.getenv('PKG_MARKER') == "SNAP":
+                root_check()
+                running_daemon()
+                gov_check()
+                run("snapctl set daemon=enabled", shell=True)
+                run("snapctl start --enable auto-cpufreq", shell=True)
+                deploy_complete_msg()
+            else:
+                root_check()
+                running_daemon()
+                gov_check()
+                deploy_daemon()
+                deploy_complete_msg()
+        elif remove:
+            if os.getenv('PKG_MARKER') == "SNAP":
+                root_check()
+                run("snapctl set daemon=disabled", shell=True)
+                run("snapctl stop --disable auto-cpufreq", shell=True)
+                if auto_cpufreq_log_file.exists():
+                    auto_cpufreq_log_file.unlink()
+                remove_complete_msg()
+            else:
+                root_check()
+                remove()
+                remove_complete_msg()
+
+
+if __name__ == '__main__':
+    main()
